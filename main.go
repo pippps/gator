@@ -1,6 +1,13 @@
 package main
 
 import (
+	"database/sql"
+
+	_ "github.com/lib/pq"
+	"github.com/pippps/gator/internal/database"
+)
+
+import (
 	"fmt"
 	"os"
 
@@ -13,14 +20,22 @@ func main() {
 		fmt.Print(err)
 	}
 
-	s := &state{
-		cfg: &cfg,
-	}
 	c := &commands{
 		commandMap: make(map[string]func(*state, command) error),
 	}
+	db, err := sql.Open("postgres", cfg.DbURL)
+	if err != nil {
+		fmt.Errorf("error opening the database: %v", err)
+	}
+	dbQueries := database.New(db)
+	s := &state{
+		db:  dbQueries,
+		cfg: &cfg,
+	}
 
 	c.register("login", handlerLogin)
+	c.register("register", handlerRegister)
+
 	args := os.Args
 	if len(args) < 2 {
 		fmt.Println("not enough argument: gator <command> ")
