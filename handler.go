@@ -90,6 +90,17 @@ func handlerRegister(s *state, cmd command) error {
 	return nil
 }
 
+func handlerReset(s *state, cmd command) error {
+	if len(cmd.arguments) != 0 {
+		fmt.Errorf("too many arguments")
+		os.Exit(2)
+	}
+	ctx := context.Background()
+	s.db.DelUsers(ctx)
+	fmt.Println("users table successful reset")
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	if err := c.commandMap[cmd.name](s, cmd); err != nil {
 		return err
