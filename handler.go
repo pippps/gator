@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"html"
 	"os"
 	"time"
 
@@ -98,6 +99,45 @@ func handlerReset(s *state, cmd command) error {
 	ctx := context.Background()
 	s.db.DelUsers(ctx)
 	fmt.Println("users table successful reset")
+	return nil
+}
+
+func handlerUsers(s *state, cmd command) error {
+	if len(cmd.arguments) != 0 {
+		fmt.Errorf("too many arguments")
+		os.Exit(3)
+	}
+	ctx := context.Background()
+	users, err := s.db.GetUsers(ctx)
+	if err != nil {
+		fmt.Errorf("problem getting all users: %v", err)
+		os.Exit(1)
+	}
+	for _, user := range users {
+		fmt.Printf("* %v", user.Name)
+		if s.cfg.CurrentUserName == user.Name {
+			fmt.Printf(" (current)")
+		}
+		fmt.Println()
+	}
+
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+	feedURL := "https://www.wagslane.dev/index.xml"
+	ctx := context.Background()
+	feed, err := fetchFeed(ctx, feedURL)
+	if err != nil {
+		fmt.Errorf("problem fetching the data: %v", err)
+		os.Exit(5)
+	}
+	scapedString :=
+		fmt.Sprintf("Title: %v \nLink: %v\nDescription %v\nItem:\n Title: %v \n Link: %v\n Description: %v\n",
+			feed.Channel.Title, feed.Channel.Link, feed.Channel.Description,
+			feed.Channel.Item[0].Title, feed.Channel.Item[0].Link, feed.Channel.Item[0].Description)
+	unscapedString := html.UnescapeString(scapedString)
+	fmt.Println(unscapedString)
 	return nil
 }
 
