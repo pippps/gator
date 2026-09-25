@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"html"
-	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -38,8 +37,7 @@ func handlerLogin(s *state, cmd command) error {
 
 	user, err := s.db.GetUser(ctx, cmd.arguments[0])
 	if user.Name != cmd.arguments[0] {
-		fmt.Errorf("user not registered")
-		os.Exit(1)
+		return fmt.Errorf("user not registered")
 	}
 
 	err = config.SetUser(*s.cfg, cmd.arguments[0])
@@ -75,8 +73,8 @@ func handlerRegister(s *state, cmd command) error {
 
 	user, err := s.db.CreateUser(ctx, userParam)
 	if err != nil {
-		fmt.Errorf("problem creating the user")
-		os.Exit(1)
+		return fmt.Errorf("problem creating the user: %v", err)
+
 	}
 
 	err = config.SetUser(*s.cfg, user.Name)
@@ -90,8 +88,7 @@ func handlerRegister(s *state, cmd command) error {
 
 func handlerReset(s *state, cmd command) error {
 	if len(cmd.arguments) != 0 {
-		fmt.Errorf("too many arguments")
-		os.Exit(2)
+		return fmt.Errorf("%s command takes no argument", cmd.name)
 	}
 	ctx := context.Background()
 	s.db.DelUsers(ctx)
@@ -101,14 +98,12 @@ func handlerReset(s *state, cmd command) error {
 
 func handlerUsers(s *state, cmd command) error {
 	if len(cmd.arguments) != 0 {
-		fmt.Errorf("too many arguments")
-		os.Exit(3)
+		return fmt.Errorf("%s command takes no argument", cmd.name)
 	}
 	ctx := context.Background()
 	users, err := s.db.GetUsers(ctx)
 	if err != nil {
-		fmt.Errorf("problem getting all users: %v", err)
-		os.Exit(1)
+		return fmt.Errorf("problem getting all users: %v", err)
 	}
 	for _, user := range users {
 		fmt.Printf("* %v", user.Name)
@@ -126,8 +121,7 @@ func handlerAgg(s *state, cmd command) error {
 	ctx := context.Background()
 	feed, err := fetchFeed(ctx, feedURL)
 	if err != nil {
-		fmt.Errorf("problem fetching the data: %v", err)
-		os.Exit(5)
+		return fmt.Errorf("problem fetching the data: %v", err)
 	}
 	scapedString :=
 		fmt.Sprintf("Title: %v \nLink: %v\nDescription %v\nItem:\n Title: %v \n Link: %v\n Description: %v\n",
@@ -140,8 +134,7 @@ func handlerAgg(s *state, cmd command) error {
 
 func handlerAddFeed(s *state, cmd command) error {
 	if len(cmd.arguments) != 2 {
-		fmt.Printf("addfeed <name> <url>")
-		os.Exit(1)
+		return fmt.Errorf("addfeed <name> <url>")
 	}
 	ctx := context.Background()
 	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
@@ -169,8 +162,29 @@ func handlerAddFeed(s *state, cmd command) error {
 
 	s.db.CreateFeed(ctx, feedParam)
 
-	fmt.Printf("ID %v, created at: %v, updated at: %v, name: %v, Url: %v user_id: %v",
-		feedParam.ID, feedParam.CreatedAt, feedParam.UpdatedAt, feedParam.Name, feedParam.Url, feedParam.UserID)
+	fmt.Printf("ID %v,  name: %v, Url: %v user_id: %v",
+		feedParam.ID, feedParam.Name, feedParam.Url, feedParam.UserID)
+	return nil
+}
+
+func handlerFeeds(s *state, cmd command) error {
+	if len(cmd.arguments) != 0 {
+		return fmt.Errorf("%s command takes no argument", cmd.name)
+	}
+	ctx := context.Background()
+	feeds, err := s.db.GetFeeds(ctx)
+	if err != nil {
+		return err
+	}
+	for _, feed := range feeds {
+		username, err := s.db.GetUserFromID(ctx, feed.UserID)
+		if err != nil {
+			return err
+		}
+		fmt.Printf("  name: %v, Url: %v username: %v",
+			feed.Name, feed.Url, username)
+	}
+
 	return nil
 }
 
