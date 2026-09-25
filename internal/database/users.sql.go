@@ -24,7 +24,7 @@ VALUES (
 `
 
 type CreateUserParams struct {
-	ID        uuid.NullUUID
+	ID        uuid.UUID
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 	Name      string

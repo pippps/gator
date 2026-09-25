@@ -10,8 +10,17 @@ import (
 	"github.com/google/uuid"
 )
 
+type Feed struct {
+	ID        uuid.UUID
+	CreatedAt sql.NullTime
+	UpdatedAt sql.NullTime
+	Name      string
+	Url       sql.NullString
+	UserID    uuid.UUID
+}
+
 type User struct {
-	ID        uuid.NullUUID
+	ID        uuid.UUID
 	CreatedAt sql.NullTime
 	UpdatedAt sql.NullTime
 	Name      string

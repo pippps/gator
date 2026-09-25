@@ -61,10 +61,7 @@ func handlerRegister(s *state, cmd command) error {
 	ctx := context.Background()
 
 	userParam := database.CreateUserParams{
-		ID: uuid.NullUUID{
-			UUID:  uuid.New(),
-			Valid: true,
-		},
+		ID: uuid.New(),
 		CreatedAt: sql.NullTime{
 			Time:  time.Now(),
 			Valid: true,
@@ -138,6 +135,42 @@ func handlerAgg(s *state, cmd command) error {
 			feed.Channel.Item[0].Title, feed.Channel.Item[0].Link, feed.Channel.Item[0].Description)
 	unscapedString := html.UnescapeString(scapedString)
 	fmt.Println(unscapedString)
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.arguments) != 2 {
+		fmt.Printf("addfeed <name> <url>")
+		os.Exit(1)
+	}
+	ctx := context.Background()
+	user, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	feedParam := database.CreateFeedParams{
+		ID: uuid.New(),
+		CreatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		UpdatedAt: sql.NullTime{
+			Time:  time.Now(),
+			Valid: true,
+		},
+		Name: cmd.arguments[0],
+		Url: sql.NullString{
+			String: cmd.arguments[1],
+			Valid:  true,
+		},
+		UserID: user.ID,
+	}
+
+	s.db.CreateFeed(ctx, feedParam)
+
+	fmt.Printf("ID %v, created at: %v, updated at: %v, name: %v, Url: %v user_id: %v",
+		feedParam.ID, feedParam.CreatedAt, feedParam.UpdatedAt, feedParam.Name, feedParam.Url, feedParam.UserID)
 	return nil
 }
 
