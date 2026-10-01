@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"html"
 	"time"
 
 	"github.com/google/uuid"
@@ -117,18 +116,21 @@ func handlerUsers(s *state, cmd command) error {
 }
 
 func handlerAgg(s *state, cmd command) error {
-	feedURL := "https://www.wagslane.dev/index.xml"
-	ctx := context.Background()
-	feed, err := fetchFeed(ctx, feedURL)
-	if err != nil {
-		return fmt.Errorf("problem fetching the data: %v", err)
+	if len(cmd.arguments) != 1 {
+		return fmt.Errorf("%s command takes one argument <time_between_reqs>", cmd.name)
 	}
-	scapedString :=
-		fmt.Sprintf("Title: %v \nLink: %v\nDescription %v\nItem:\n Title: %v \n Link: %v\n Description: %v\n",
-			feed.Channel.Title, feed.Channel.Link, feed.Channel.Description,
-			feed.Channel.Item[0].Title, feed.Channel.Item[0].Link, feed.Channel.Item[0].Description)
-	unscapedString := html.UnescapeString(scapedString)
-	fmt.Println(unscapedString)
+	timeBetweenRequests, err := time.ParseDuration(cmd.arguments[0])
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		if err = scrapeFeeds(s); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -238,7 +240,7 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	}
 
 	for _, feed := range feedsFollowsForUser {
-		fmt.Printf("feed name: %s", feed.FeedName)
+		fmt.Printf("feed name: %s\n", feed.FeedName)
 	}
 
 	return nil

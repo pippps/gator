@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/xml"
+	"fmt"
 	"io"
 	"net/http"
 	"time"
@@ -44,9 +45,29 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	if err != nil {
 		return nil, err
 	}
-	feed := &RSSFeed{}
-	if err := xml.Unmarshal(data, feed); err != nil {
+	rssFeed := &RSSFeed{}
+	if err := xml.Unmarshal(data, rssFeed); err != nil {
 		return nil, err
 	}
-	return feed, err
+	return rssFeed, err
+}
+
+func scrapeFeeds(s *state) error {
+	ctx := context.Background()
+	feed, err := s.db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return err
+	}
+
+	if err = s.db.MarkFeedFetched(ctx, feed.ID); err != nil {
+		return err
+	}
+
+	rssFeed, err := fetchFeed(ctx, feed.Url.String)
+
+	for _, item := range rssFeed.Channel.Item {
+		fmt.Printf("item title: %s\n", item.Title)
+	}
+
+	return nil
 }
