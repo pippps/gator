@@ -17,3 +17,11 @@ SELECT
     user_id
 FROM
     feeds;
+
+-- name: GetFeed :one
+SELECT
+    *
+FROM
+    feeds
+WHERE
+    url = $1;
