@@ -2,11 +2,18 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
+	"github.com/pippps/gator/internal/database"
 )
 
 type RSSFeed struct {
@@ -66,8 +73,50 @@ func scrapeFeeds(s *state) error {
 	rssFeed, err := fetchFeed(ctx, feed.Url.String)
 
 	for _, item := range rssFeed.Channel.Item {
+		pubTime, err := parseStringToTime(item.PubDate)
+		if err != nil {
+			return err
+		}
+		createPostParams := database.CreatePostParams{
+			ID: uuid.New(),
+			CreatedAt: sql.NullTime{
+				Time:  time.Now(),
+				Valid: true,
+			},
+			UpdatedAt: sql.NullTime{
+				Time:  time.Now(),
+				Valid: true,
+			},
+			Title: item.Title,
+			Url: sql.NullString{
+				String: item.Link,
+				Valid:  true,
+			},
+			Description: sql.NullString{
+				String: item.Description,
+				Valid:  true,
+			},
+			PublishedAt: sql.NullTime{
+				Time:  pubTime,
+				Valid: true,
+			},
+			FeedID: feed.ID,
+		}
+		err = s.db.CreatePost(ctx, createPostParams)
+		if err != nil {
+			var pqErr *pq.Error
+			if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+		} else {
+			log.Fatal(err)
+		}
+		}
 		fmt.Printf("item title: %s\n", item.Title)
 	}
 
 	return nil
+}
+
+func parseStringToTime(pubDate string) (time.Time, error) {
+
+	return time.Parse(time.RFC1123Z, pubDate)
 }

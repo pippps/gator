@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -268,6 +269,32 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	}
 	fmt.Printf("You no longer follow %s feed", feed.Name)
 
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command) error {
+	if len(cmd.arguments) > 1 {
+		return fmt.Errorf("%s command accept one optional argument set to 2 if not defined: <limit>",
+			cmd.name)
+	}
+	limit := 2
+	var err error
+	if len(cmd.arguments) == 1 {
+		limit, err = strconv.Atoi(cmd.arguments[0])
+		if err != nil {
+			return err
+		}
+	}
+
+	limit32 := int32(limit)
+	posts, err := s.db.GetPostsForUser(context.Background(), limit32)
+	if err != nil {
+		return err
+	}
+	for _, post := range posts {
+		fmt.Printf("Title: %s\nURL: %v\nPublished at: %v\nDescription: %v\n\n",
+			post.Title, post.Url.String, post.PublishedAt.Time, post.Description.String)
+	}
 	return nil
 }
 
